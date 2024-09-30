@@ -662,6 +662,50 @@ suite "GossipSub internal":
     await allFuturesThrowing(conns.mapIt(it.close()))
     await gossipSub.switch.stop()
 
+  # test cases for block 5 gossibsub test plan 
+  # tests 1 -4 for checking the formatting of objects 
+  # have - want - graft - prune
+
+  asyncTest "Check ControlIHave formatting":
+    let topic = "dummytopic"
+
+    let msgID = @[0'u8, 1, 2, 3]
+    let msg = ControlIHave(topicID: topic, messageIDs: @[msgID])
+    check:
+      msg.topicID == topic
+      msg.messageIDs == @[msgID]
+
+  asyncTest "Check ControlIWant formatting":
+    let msgID = @[0'u8, 1, 2, 3]
+    let msg = ControlIWant(messageIDs: @[msgID])
+    check:
+      msg.messageIDs == @[msgID]
+
+  asyncTest "Check ControGraft formatting":
+    let topic = "dummytopic"
+    let msg = ControlGraft(topicID: topic)
+    check:
+      msg.topicID == topic
+
+  asyncTest "Check ControPrune":
+    let topic = "foobar"
+    #var peerecord:seq[bytes]
+    var
+      peerecord: seq[byte] = @[1, 2, 3]
+      peerData: seq[byte] = @[4, 5]
+      backoff: uint64 = 123
+      peerInfo = PeerInfoMsg(
+        peerId: PeerId(data: @['e'.byte]), # 1 byte
+        signedPeerRecord: @['f'.byte, 'g'.byte] # 2 bytes
+        ,
+      )
+
+    let msg = ControlPrune(topicID: topic, peers: @[peerInfo], backoff: backoff)
+    check:
+      msg.topicID == topic
+      msg.peers.contains(peerInfo)
+      msg.backoff == backoff
+
   asyncTest "handleIHave/Iwant tests":
     let gossipSub = TestGossipSub.init(newStandardSwitch())
 
