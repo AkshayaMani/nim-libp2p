@@ -664,28 +664,59 @@ suite "GossipSub internal":
 
   # test cases for block 5 gossibsub test plan 
   #check correctly parsed ihave/iwant messages
-  # check value before & after decoding equal " round trip testing
+  # check value before & after decoding equal using protoc cmd tool for reference
   # check encoding / decoding time less than 1 millisecond
-  asyncTest "Check encoding/decoding roundtrip ":
-    let id = @[0'u8, 1, 2, 3]
-    let msg = Message(topic: "topic", data: id)
+  asyncTest "Check RPCMsg encoding":
+    let backofftime = 10.uint64
+    var id: seq[byte] = @[123]
     let rpcMsg = RPCMsg(
       control: some(
-        ControlMessage(ihave: @[ControlIHave(topicID: "foobar", messageIDs: @[id])],
-        iwant: @[ControlIWant(messageIDs: @[@[0'u8,1,2]])])
+        ControlMessage(
+          ihave: @[ControlIHave(topicID: "foobar", messageIDs: @[id])],
+          iwant: @[ControlIWant(messageIDs: @[id])],
+          graft: @[ControlGraft(topicID: "foobar")],
+          prune: @[ControlPrune(topicID: "foobar", backoff: backofftime)],
+        )
       )
     )
+    let encodedExpected: seq[byte] =
+      @[
+        26, 44, 10, 10, 6, 102, 111, 111, 98, 97, 114, 18, 3, 49, 50, 51, 18, 5, 10, 3,
+        49, 50, 51, 26, 8, 10, 6, 102, 111, 111, 98, 97, 114, 34, 10, 10, 6, 102, 111,
+        111, 98, 97, 114, 16,
+      ] #encoded using protoc cmd tool
+
     let encodeTimeout = Moment.now() + 1.milliseconds
-    let encoded = encodeRpcMsg(rpcMsg, true)
+    let encodedMsg = encodeRpcMsg(rpcMsg, true)
     let timeout2 = Moment.now()
-    let decoded = decodeRpcMsg(encoded)
-    echo encoded
-    let decodeTime = Moment.now()
     check:
-      rpcMsg == decoded.value
       encodeTimeout > timeout2
-      timeout2+1.milliseconds > decodeTime
-    
+      encodedExpected == encodedMsg
+
+  asyncTest "Check RPCMsg decoding":
+    let id: seq[byte] = @[1]
+    let originMessage = RPCMsg(
+      control: some(
+        ControlMessage(
+          ihave: @[ControlIHave(topicID: "foobar", messageIDs: @[id])],
+          graft: @[ControlGraft(topicID: "foobar")],
+        )
+      )
+    )
+    #data encoded using protoc cmd tool
+    let encodedMsg: seq[byte] =
+      @[
+        26, 23, 10, 11, 10, 6, 102, 111, 111, 98, 97, 114, 18, 1, 49, 26, 8, 10, 6, 102,
+        111, 111, 98, 97, 114,
+      ]
+
+    let decodeTimeout = Moment.now() + 1.milliseconds
+    var rpcMsg = decodeRpcMsg(encodedMsg).value
+    let timeout2 = Moment.now()
+    check:
+      decodeTimeout > timeout2
+      rpcMsg == originMessage
+
   asyncTest "handleIHave/Iwant tests":
     let gossipSub = TestGossipSub.init(newStandardSwitch())
 
