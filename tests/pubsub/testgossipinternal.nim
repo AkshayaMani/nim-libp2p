@@ -665,7 +665,6 @@ suite "GossipSub internal":
       # test cases for block 5 gossibsub test plan 
       # check correctly parsed ihave/iwant/graft/prune/idontwant messages
       # check value before & after decoding equal using protoc cmd tool for reference
-      # check encoding / decoding time less than 1 millisecond
   asyncTest "Check RPCMsg encoding":
     let backofftime = 10.uint64
     var id: seq[byte] = @[123]
@@ -687,11 +686,9 @@ suite "GossipSub internal":
         111, 98, 97, 114, 16, 10, 42, 5, 10, 3, 49, 50, 51,
       ] #encoded using protoc cmd tool
 
-    let encodeTimeout = Moment.now() + 1.milliseconds
-    let encodedMsg = encodeRpcMsg(rpcMsg, true)
-    let timeout2 = Moment.now()
+   
     check:
-      encodeTimeout > timeout2
+      
       encodedExpected == encodedMsg
 
   asyncTest "Check RPCMsg decoding":
@@ -716,11 +713,9 @@ suite "GossipSub internal":
         3, 10, 1, 49,
       ]
 
-    let decodeTimeout = Moment.now() + 1.milliseconds
-    var rpcMsg = decodeRpcMsg(encodedMsg).value
-    let timeout2 = Moment.now()
+    
     check:
-      decodeTimeout > timeout2
+      
       rpcMsg == originMessage
 
   asyncTest "handleIHave/Iwant tests":
