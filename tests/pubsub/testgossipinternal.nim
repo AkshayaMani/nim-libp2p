@@ -662,10 +662,10 @@ suite "GossipSub internal":
     await allFuturesThrowing(conns.mapIt(it.close()))
     await gossipSub.switch.stop()
 
-  # test cases for block 5 gossibsub test plan 
-  #check correctly parsed ihave/iwant messages
-  # check value before & after decoding equal using protoc cmd tool for reference
-  # check encoding / decoding time less than 1 millisecond
+      # test cases for block 5 gossibsub test plan 
+      # check correctly parsed ihave/iwant/graft/prune/idontwant messages
+      # check value before & after decoding equal using protoc cmd tool for reference
+      # check encoding / decoding time less than 1 millisecond
   asyncTest "Check RPCMsg encoding":
     let backofftime = 10.uint64
     var id: seq[byte] = @[123]
@@ -676,14 +676,15 @@ suite "GossipSub internal":
           iwant: @[ControlIWant(messageIDs: @[id])],
           graft: @[ControlGraft(topicID: "foobar")],
           prune: @[ControlPrune(topicID: "foobar", backoff: backofftime)],
+          idontwant: @[ControlIWant(messageIDs: @[id])],
         )
       )
     )
     let encodedExpected: seq[byte] =
       @[
-        26, 44, 10, 10, 6, 102, 111, 111, 98, 97, 114, 18, 3, 49, 50, 51, 18, 5, 10, 3,
+        26, 51, 10, 10, 6, 102, 111, 111, 98, 97, 114, 18, 3, 49, 50, 51, 18, 5, 10, 3,
         49, 50, 51, 26, 8, 10, 6, 102, 111, 111, 98, 97, 114, 34, 10, 10, 6, 102, 111,
-        111, 98, 97, 114, 16,
+        111, 98, 97, 114, 16, 10, 42, 5, 10, 3, 49, 50, 51,
       ] #encoded using protoc cmd tool
 
     let encodeTimeout = Moment.now() + 1.milliseconds
@@ -694,20 +695,25 @@ suite "GossipSub internal":
       encodedExpected == encodedMsg
 
   asyncTest "Check RPCMsg decoding":
+    let backofftime = 12.uint64
     let id: seq[byte] = @[1]
     let originMessage = RPCMsg(
       control: some(
         ControlMessage(
           ihave: @[ControlIHave(topicID: "foobar", messageIDs: @[id])],
-          graft: @[ControlGraft(topicID: "foobar")],
+          iwant: @[ControlIWant(messageIDs: @[id])],
+          graft: @[ControlGraft(topicID: "topic")],
+          prune: @[ControlPrune(topicID: "new", backoff: backofftime)],
+          idontwant: @[ControlIWant(messageIDs: @[id])],
         )
       )
     )
     #data encoded using protoc cmd tool
     let encodedMsg: seq[byte] =
       @[
-        26, 23, 10, 11, 10, 6, 102, 111, 111, 98, 97, 114, 18, 1, 49, 26, 8, 10, 6, 102,
-        111, 111, 98, 97, 114,
+        26, 41, 10, 11, 10, 6, 102, 111, 111, 98, 97, 114, 18, 1, 49, 18, 3, 10, 1, 49,
+        26, 7, 10, 5, 116, 111, 112, 105, 99, 34, 7, 10, 3, 110, 101, 119, 16, 12, 42,
+        3, 10, 1, 49,
       ]
 
     let decodeTimeout = Moment.now() + 1.milliseconds
