@@ -686,9 +686,8 @@ suite "GossipSub internal":
         111, 98, 97, 114, 16, 10, 42, 5, 10, 3, 49, 50, 51,
       ] #encoded using protoc cmd tool
 
-   
+    let encodedMsg = encodeRpcMsg(rpcMsg, true)
     check:
-      
       encodedExpected == encodedMsg
 
   asyncTest "Check RPCMsg decoding":
@@ -713,9 +712,8 @@ suite "GossipSub internal":
         3, 10, 1, 49,
       ]
 
-    
+    var rpcMsg = decodeRpcMsg(encodedMsg).value
     check:
-      
       rpcMsg == originMessage
 
   asyncTest "handleIHave/Iwant tests":
