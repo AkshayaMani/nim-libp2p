@@ -92,6 +92,8 @@ type
     # Task for processing non-priority message queue.
     sendNonPriorityTask: Future[void]
 
+  MixConn* = proc(destAddr: MultiAddress, destPeerId: PeerId, codec: string): Connection
+
   PubSubPeer* = ref object of RootObj
     getConn*: GetConn # callback to establish a new send connection
     onEvent*: OnEvent # Connectivity updates for peer
@@ -120,6 +122,7 @@ type
     maxNumElementsInNonPriorityQueue*: int
       # The max number of elements allowed in the non-priority queue.
     disconnected: bool
+    mixConn*: Option[MixConn]
 
   RPCHandler* =
     proc(peer: PubSubPeer, data: seq[byte]): Future[void] {.gcsafe, raises: [].}
@@ -350,7 +353,16 @@ proc sendMsgSlow(p: PubSubPeer, msg: seq[byte]) {.async.} =
 proc sendMsg(p: PubSubPeer, msg: seq[byte]): Future[void] =
   if p.sendConn != nil and not p.sendConn.closed():
     # Fast path that avoids copying msg (which happens for {.async.})
-    let conn = p.sendConn
+    let conn =
+      if p.mixConn.isSome:
+        let address =
+          if p.address.isSome:
+            some(p.address.get)
+          else:
+            none(MultiAddress)
+        p.mixConn(address, p.peerId, p.codec)
+      else:
+        p.sendConn
 
     trace "sending encoded msg to peer", conn, encoded = shortLog(msg)
     let f = conn.writeLp(msg)
@@ -543,6 +555,7 @@ proc new*(
     maxMessageSize: int,
     maxNumElementsInNonPriorityQueue: int = DefaultMaxNumElementsInNonPriorityQueue,
     overheadRateLimitOpt: Opt[TokenBucket] = Opt.none(TokenBucket),
+    mixConn: Option[MixConn] = none(MixConn),
 ): T =
   result = T(
     getConn: getConn,
@@ -554,6 +567,7 @@ proc new*(
     overheadRateLimitOpt: overheadRateLimitOpt,
     rpcmessagequeue: RpcMessageQueue.new(),
     maxNumElementsInNonPriorityQueue: maxNumElementsInNonPriorityQueue,
+    mixConn: mixConn,
   )
   result.sentIHaves.addFirst(default(HashSet[MessageId]))
   result.iDontWants.addFirst(default(HashSet[SaltedId]))

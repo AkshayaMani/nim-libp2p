@@ -174,6 +174,7 @@ type
     rng*: ref HmacDrbgContext
 
     knownTopics*: HashSet[string]
+    mixConn*: Option[MixConn]
 
 method unsubscribePeer*(p: PubSub, peerId: PeerId) {.base, gcsafe.} =
   ## handle peer disconnects
@@ -362,8 +363,9 @@ method getOrCreatePeer*(
     p.onPubSubPeerEvent(peer, event)
 
   # create new pubsub peer
-  let pubSubPeer =
-    PubSubPeer.new(peerId, getConn, onEvent, protoNegotiated, p.maxMessageSize)
+  let pubSubPeer = PubSubPeer.new(
+    peerId, getConn, onEvent, protoNegotiated, p.maxMessageSize, mixConn = p.mixConn
+  )
   debug "created new pubsub peer", peerId
 
   p.peers[peerId] = pubSubPeer
