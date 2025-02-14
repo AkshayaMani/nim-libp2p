@@ -684,7 +684,9 @@ method onTopicSubscription*(g: GossipSub, topic: string, subscribed: bool) =
     # Send unsubscribe (in reverse order to sub/graft)
     procCall PubSub(g).onTopicSubscription(topic, subscribed)
 
-method publish*(g: GossipSub, topic: string, data: seq[byte]): Future[int] {.async.} =
+method publish*(
+    g: GossipSub, topic: string, data: seq[byte], useMix: bool = false
+): Future[int] {.async.} =
   logScope:
     topic
 
@@ -784,7 +786,7 @@ method publish*(g: GossipSub, topic: string, data: seq[byte]): Future[int] {.asy
 
   g.mcache.put(msgId, msg)
 
-  g.broadcast(peers, RPCMsg(messages: @[msg]), isHighPriority = true)
+  g.broadcast(peers, RPCMsg(messages: @[msg]), isHighPriority = true, useMix = useMix)
 
   if g.knownTopics.contains(topic):
     libp2p_pubsub_messages_published.inc(peers.len.int64, labelValues = [topic])

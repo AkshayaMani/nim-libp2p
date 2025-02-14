@@ -186,7 +186,7 @@ method unsubscribePeer*(p: PubSub, peerId: PeerId) {.base, gcsafe.} =
   libp2p_pubsub_peers.set(p.peers.len.int64)
 
 proc send*(
-    p: PubSub, peer: PubSubPeer, msg: RPCMsg, isHighPriority: bool
+    p: PubSub, peer: PubSubPeer, msg: RPCMsg, isHighPriority: bool, useMix: bool = false
 ) {.raises: [].} =
   ## This procedure attempts to send a `msg` (of type `RPCMsg`) to the specified remote peer in the PubSub network.
   ##
@@ -199,13 +199,14 @@ proc send*(
   ## priority messages have been sent.
 
   trace "sending pubsub message to peer", peer, payload = shortLog(msg)
-  peer.send(msg, p.anonymize, isHighPriority)
+  peer.send(msg, p.anonymize, isHighPriority, useMix)
 
 proc broadcast*(
     p: PubSub,
     sendPeers: auto, # Iteratble[PubSubPeer]
     msg: RPCMsg,
     isHighPriority: bool,
+    useMix: bool,
 ) {.raises: [].} =
   ## This procedure attempts to send a `msg` (of type `RPCMsg`) to a specified group of peers in the PubSub network.
   ##
@@ -260,12 +261,12 @@ proc broadcast*(
 
   if anyIt(sendPeers, it.hasObservers):
     for peer in sendPeers:
-      p.send(peer, msg, isHighPriority)
+      p.send(peer, msg, isHighPriority, useMix)
   else:
     # Fast path that only encodes message once
     let encoded = encodeRpcMsg(msg, p.anonymize)
     for peer in sendPeers:
-      asyncSpawn peer.sendEncoded(encoded, isHighPriority)
+      asyncSpawn peer.sendEncoded(encoded, isHighPriority, useMix)
 
 proc sendSubs*(
     p: PubSub, peer: PubSubPeer, topics: openArray[string], subscribe: bool
