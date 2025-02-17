@@ -683,7 +683,10 @@ method onTopicSubscription*(g: GossipSub, topic: string, subscribed: bool) =
     procCall PubSub(g).onTopicSubscription(topic, subscribed)
 
 method publish*(
-    g: GossipSub, topic: string, data: seq[byte], conn: Option[Connection] = none
+    g: GossipSub,
+    topic: string,
+    data: seq[byte],
+    conn: Option[Connection] = none(Connection),
 ): Future[int] {.async.} =
   logScope:
     topic

@@ -205,7 +205,7 @@ proc broadcast*(
     sendPeers: auto, # Iteratble[PubSubPeer]
     msg: RPCMsg,
     isHighPriority: bool,
-    conn: Option[Connection] = none,
+    conn: Option[Connection] = none(Connection),
 ) {.raises: [].} =
   ## This procedure attempts to send a `msg` (of type `RPCMsg`) to a specified group of peers in the PubSub network.
   ##

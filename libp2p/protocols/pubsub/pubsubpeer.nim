@@ -348,7 +348,7 @@ proc sendMsgSlow(p: PubSubPeer, msg: seq[byte]) {.async.} =
   await sendMsgContinue(conn, conn.writeLp(msg))
 
 proc sendMsg(
-    p: PubSubPeer, msg: seq[byte], conn: Option[Connection] = none
+    p: PubSubPeer, msg: seq[byte], conn: Option[Connection] = none(Connection)
 ): Future[void] =
   if p.sendConn != nil and not p.sendConn.closed():
     # Fast path that avoids copying msg (which happens for {.async.})
@@ -368,7 +368,10 @@ proc sendMsg(
     sendMsgSlow(p, msg)
 
 proc sendEncoded*(
-    p: PubSubPeer, msg: seq[byte], isHighPriority: bool, conn: Option[Connection] = none
+    p: PubSubPeer,
+    msg: seq[byte],
+    isHighPriority: bool,
+    conn: Option[Connection] = none(Connection),
 ): Future[void] =
   ## Asynchronously sends an encoded message to a specified `PubSubPeer`.
   ##
@@ -461,7 +464,7 @@ proc send*(
     msg: RPCMsg,
     anonymize: bool,
     isHighPriority: bool,
-    conn: Option[Connection] = none,
+    conn: Option[Connection] = none(Connection),
 ) {.raises: [].} =
   ## Asynchronously sends an `RPCMsg` to a specified `PubSubPeer` with an option for anonymization.
   ##
