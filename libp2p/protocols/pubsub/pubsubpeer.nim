@@ -354,7 +354,7 @@ proc sendMsg(p: PubSubPeer, msg: seq[byte], useMix: bool = false): Future[void] 
   if p.sendConn != nil and not p.sendConn.closed():
     # Fast path that avoids copying msg (which happens for {.async.})
     let conn =
-      if p.mixConn.isSome:
+      if useMix and p.mixConn.isSome:
         let address =
           if p.address.isSome:
             some(p.address.get)
