@@ -360,7 +360,7 @@ proc sendMsg(p: PubSubPeer, msg: seq[byte], useMix: bool = false): Future[void] 
             some(p.address.get)
           else:
             none(MultiAddress)
-        p.mixConn(address, p.peerId, p.codec)
+        p.mixConn.get()(address, p.peerId, p.codec)
       else:
         p.sendConn
 
