@@ -347,21 +347,29 @@ proc sendMsgSlow(p: PubSubPeer, msg: seq[byte]) {.async.} =
   trace "sending encoded msg to peer", conn, encoded = shortLog(msg)
   await sendMsgContinue(conn, conn.writeLp(msg))
 
-proc sendMsg(p: PubSubPeer, msg: seq[byte]): Future[void] =
+proc sendMsg(
+    p: PubSubPeer, msg: seq[byte], conn: Option[Connection] = none
+): Future[void] =
   if p.sendConn != nil and not p.sendConn.closed():
     # Fast path that avoids copying msg (which happens for {.async.})
-    let conn = p.sendConn
+    let connToUse =
+      if isNone(conn):
+        p.sendConn
+      else:
+        conn.get()
 
-    trace "sending encoded msg to peer", conn, encoded = shortLog(msg)
-    let f = conn.writeLp(msg)
+    trace "sending encoded msg to peer", connToUse, encoded = shortLog(msg)
+    let f = connToUse.writeLp(msg)
     if not f.completed():
-      sendMsgContinue(conn, f)
+      sendMsgContinue(connToUse, f)
     else:
       f
   else:
     sendMsgSlow(p, msg)
 
-proc sendEncoded*(p: PubSubPeer, msg: seq[byte], isHighPriority: bool): Future[void] =
+proc sendEncoded*(
+    p: PubSubPeer, msg: seq[byte], isHighPriority: bool, conn: Option[Connection] = none
+): Future[void] =
   ## Asynchronously sends an encoded message to a specified `PubSubPeer`.
   ##
   ## Parameters:
@@ -390,7 +398,7 @@ proc sendEncoded*(p: PubSubPeer, msg: seq[byte], isHighPriority: bool): Future[v
       maxSize = p.maxMessageSize, msgSize = msg.len
     Future[void].completed()
   elif isHighPriority or emptyQueues:
-    let f = p.sendMsg(msg)
+    let f = p.sendMsg(msg, conn)
     if not f.finished:
       p.rpcmessagequeue.sendPriorityQueue.addLast(f)
       when defined(pubsubpeer_queue_metrics):
@@ -449,7 +457,11 @@ iterator splitRPCMsg(
     trace "message too big to sent", peer, rpcMsg = shortLog(currentRPCMsg)
 
 proc send*(
-    p: PubSubPeer, msg: RPCMsg, anonymize: bool, isHighPriority: bool
+    p: PubSubPeer,
+    msg: RPCMsg,
+    anonymize: bool,
+    isHighPriority: bool,
+    conn: Option[Connection] = none,
 ) {.raises: [].} =
   ## Asynchronously sends an `RPCMsg` to a specified `PubSubPeer` with an option for anonymization.
   ##
@@ -480,11 +492,11 @@ proc send*(
 
   if encoded.len > p.maxMessageSize and msg.messages.len > 1:
     for encodedSplitMsg in splitRPCMsg(p, msg, p.maxMessageSize, anonymize):
-      asyncSpawn p.sendEncoded(encodedSplitMsg, isHighPriority)
+      asyncSpawn p.sendEncoded(encodedSplitMsg, isHighPriority, conn)
   else:
     # If the message size is within limits, send it as is
     trace "sending msg to peer", peer = p, rpcMsg = shortLog(msg)
-    asyncSpawn p.sendEncoded(encoded, isHighPriority)
+    asyncSpawn p.sendEncoded(encoded, isHighPriority, conn)
 
 proc canAskIWant*(p: PubSubPeer, msgId: MessageId): bool =
   for sentIHave in p.sentIHaves.mitems():

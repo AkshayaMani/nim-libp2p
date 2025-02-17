@@ -205,6 +205,7 @@ proc broadcast*(
     sendPeers: auto, # Iteratble[PubSubPeer]
     msg: RPCMsg,
     isHighPriority: bool,
+    conn: Option[Connection] = none,
 ) {.raises: [].} =
   ## This procedure attempts to send a `msg` (of type `RPCMsg`) to a specified group of peers in the PubSub network.
   ##
@@ -259,12 +260,12 @@ proc broadcast*(
 
   if anyIt(sendPeers, it.hasObservers):
     for peer in sendPeers:
-      p.send(peer, msg, isHighPriority)
+      p.send(peer, msg, isHighPriority, conn)
   else:
     # Fast path that only encodes message once
     let encoded = encodeRpcMsg(msg, p.anonymize)
     for peer in sendPeers:
-      asyncSpawn peer.sendEncoded(encoded, isHighPriority)
+      asyncSpawn peer.sendEncoded(encoded, isHighPriority, conn)
 
 proc sendSubs*(
     p: PubSub, peer: PubSubPeer, topics: openArray[string], subscribe: bool
