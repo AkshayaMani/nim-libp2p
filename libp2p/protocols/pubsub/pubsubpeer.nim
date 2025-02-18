@@ -92,7 +92,7 @@ type
     # Task for processing non-priority message queue.
     sendNonPriorityTask: Future[void]
 
-  MixConn* = proc(destAddr: MultiAddress, destPeerId: PeerId, codec: string): Connection
+  MixConn* = proc(destAddr: Option[MultiAddress], destPeerId: PeerId, codec: string): Connection
 
   PubSubPeer* = ref object of RootObj
     getConn*: GetConn # callback to establish a new send connection
