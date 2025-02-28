@@ -423,6 +423,7 @@ proc validateAndRelay(
             some(ControlMessage(idontwant: @[ControlIWant(messageIDs: @[msgId])]))
         ),
         isHighPriority = true,
+        useMix = false,
       )
 
     let validation = await g.validate(msg)
@@ -479,7 +480,7 @@ proc validateAndRelay(
 
     # In theory, if topics are the same in all messages, we could batch - we'd
     # also have to be careful to only include validated messages
-    g.broadcast(toSendPeers, RPCMsg(messages: @[msg]), isHighPriority = false)
+    g.broadcast(toSendPeers, RPCMsg(messages: @[msg]), isHighPriority = false, useMix = false)
     trace "forwarded message to peers", peers = toSendPeers.len, msgId, peer
 
     if g.knownTopics.contains(topic):
@@ -674,7 +675,7 @@ method onTopicSubscription*(g: GossipSub, topic: string, subscribed: bool) =
         )
       )
     )
-    g.broadcast(mpeers, msg, isHighPriority = true)
+    g.broadcast(mpeers, msg, isHighPriority = true, useMix = false)
 
     for peer in mpeers:
       g.pruned(peer, topic, backoff = some(g.parameters.unsubscribeBackoff))
