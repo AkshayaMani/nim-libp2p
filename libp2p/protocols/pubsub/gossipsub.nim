@@ -102,7 +102,6 @@ proc init*(
     overheadRateLimit = Opt.none(tuple[bytes: int, interval: Duration]),
     disconnectPeerAboveRateLimit = false,
     maxNumElementsInNonPriorityQueue = DefaultMaxNumElementsInNonPriorityQueue,
-    mixConn: Option[MixConn] = none(MixConn),
 ): GossipSubParams =
   GossipSubParams(
     explicit: true,
@@ -140,7 +139,6 @@ proc init*(
     overheadRateLimit: overheadRateLimit,
     disconnectPeerAboveRateLimit: disconnectPeerAboveRateLimit,
     maxNumElementsInNonPriorityQueue: maxNumElementsInNonPriorityQueue,
-    mixConn: mixConn,
   )
 
 proc validateParameters*(parameters: GossipSubParams): Result[void, cstring] =

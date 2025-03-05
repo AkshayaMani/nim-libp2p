@@ -627,6 +627,7 @@ proc init*[PubParams: object | bool](
     maxMessageSize: int = 1024 * 1024,
     rng: ref HmacDrbgContext = newRng(),
     parameters: PubParams = false,
+    mixConn: Option[MixConn] = none(MixConn),
 ): P {.raises: [InitializationError], public.} =
   let pubsub =
     when PubParams is bool:
@@ -642,6 +643,7 @@ proc init*[PubParams: object | bool](
         maxMessageSize: maxMessageSize,
         rng: rng,
         topicsHigh: int.high,
+        mixConn: mixConn,
       )
     else:
       P(
@@ -657,6 +659,7 @@ proc init*[PubParams: object | bool](
         maxMessageSize: maxMessageSize,
         rng: rng,
         topicsHigh: int.high,
+        mixConn: mixConn,
       )
 
   proc peerEventHandler(peerId: PeerId, event: PeerEvent) {.async.} =
