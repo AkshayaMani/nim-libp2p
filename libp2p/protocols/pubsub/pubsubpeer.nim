@@ -351,27 +351,25 @@ proc sendMsgSlow(p: PubSubPeer, msg: seq[byte]) {.async.} =
   await sendMsgContinue(conn, conn.writeLp(msg))
 
 proc sendMsg(p: PubSubPeer, msg: seq[byte], useMix: bool = false): Future[void] =
-  if p.sendConn != nil and not p.sendConn.closed():
-    # Fast path that avoids copying msg (which happens for {.async.})
-    let conn =
-      if useMix and p.mixConn.isSome:
-        let address =
-          if p.address.isSome:
+  let (conn, connType) =
+    if useMix and p.mixConn.isSome:
+      let address =
+        if p.address.isSome:
             some(p.address.get)
           else:
             none(MultiAddress)
-        p.mixConn.get()(address, p.peerId, p.codec)
-      else:
-        p.sendConn
+      (p.mixConn.get()(address, p.peerId, p.codec), "mix")
+    elif p.sendConn != nil and not p.sendConn.closed():
+      (p.sendConn, "regular")
+    else:
+      return sendMsgSlow(p, msg)
 
-    trace "sending encoded msg to peer", conn, encoded = shortLog(msg)
-    let f = conn.writeLp(msg)
+  trace "sending encoded msg to peer via "& connType, conn, encoded = shortLog(msg)
+  let f = conn.writeLp(msg)
     if not f.completed():
       sendMsgContinue(conn, f)
     else:
-      f
-  else:
-    sendMsgSlow(p, msg)
+      f 
 
 proc sendEncoded*(
     p: PubSubPeer, msg: seq[byte], isHighPriority: bool, useMix: bool
