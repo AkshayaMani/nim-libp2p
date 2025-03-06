@@ -362,14 +362,15 @@ proc sendMsg(p: PubSubPeer, msg: seq[byte], useMix: bool = false): Future[void] 
     elif p.sendConn != nil and not p.sendConn.closed():
       (p.sendConn, "regular")
     else:
+      trace "sending encoded msg to peer via slow path"
       return sendMsgSlow(p, msg)
 
-  trace "sending encoded msg to peer via "& connType, conn, encoded = shortLog(msg)
+  trace "sending encoded msg to peer", conntype = connType, conn = conn, encoded = shortLog(msg)
   let f = conn.writeLp(msg)
-    if not f.completed():
-      sendMsgContinue(conn, f)
-    else:
-      f 
+  if not f.completed():
+    sendMsgContinue(conn, f)
+  else:
+    f 
 
 proc sendEncoded*(
     p: PubSubPeer, msg: seq[byte], isHighPriority: bool, useMix: bool
