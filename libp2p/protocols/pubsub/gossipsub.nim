@@ -11,7 +11,7 @@
 
 {.push raises: [].}
 
-import std/[sets, sequtils]
+import std/[sets, sequtils, sysrand]
 import chronos, chronicles, metrics
 import chronos/ratelimit
 import
