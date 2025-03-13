@@ -706,7 +706,7 @@ method publish*(
     let
       allPeers = g.gossipsub.getOrDefault(topic).toSeq()
       allPeersLen = allPeers.len
-    for i in 0 .. 3:
+    for i in 0 .. 4:
       var bytes: array[8, byte]
       discard urandom(bytes)
       let
