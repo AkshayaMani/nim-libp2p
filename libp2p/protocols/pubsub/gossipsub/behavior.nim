@@ -126,8 +126,7 @@ proc peerExchangeList*(g: GossipSub, topic: string): seq[PeerInfoMsg] =
         if x.peerId in sprBook:
           sprBook[x.peerId].encode().get(default(seq[byte]))
         else:
-          default(seq[byte])
-      ,
+          default(seq[byte]),
     )
 
 proc handleGraft*(
@@ -587,7 +586,7 @@ proc rebalanceMesh*(g: GossipSub, topic: string, metrics: ptr MeshMetrics = nil)
   if grafts.len > 0:
     let graft =
       RPCMsg(control: some(ControlMessage(graft: @[ControlGraft(topicID: topic)])))
-    g.broadcast(grafts, graft, isHighPriority = true)
+    g.broadcast(grafts, graft, isHighPriority = true, useCustomConn = false)
   if prunes.len > 0:
     let prune = RPCMsg(
       control: some(
@@ -603,7 +602,7 @@ proc rebalanceMesh*(g: GossipSub, topic: string, metrics: ptr MeshMetrics = nil)
         )
       )
     )
-    g.broadcast(prunes, prune, isHighPriority = true)
+    g.broadcast(prunes, prune, isHighPriority = true, useCustomConn = false)
 
 proc dropFanoutPeers*(g: GossipSub) =
   # drop peers that we haven't published to in
@@ -744,7 +743,7 @@ proc onHeartbeat(g: GossipSub) =
           )
         )
       )
-      g.broadcast(prunes, prune, isHighPriority = true)
+      g.broadcast(prunes, prune, isHighPriority = true, useCustomConn = false)
 
     # pass by ptr in order to both signal we want to update metrics
     # and as well update the struct for each topic during this iteration
