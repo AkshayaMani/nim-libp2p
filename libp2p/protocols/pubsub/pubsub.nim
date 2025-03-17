@@ -174,7 +174,7 @@ type
     rng*: ref HmacDrbgContext
 
     knownTopics*: HashSet[string]
-    customConn*: Option[CustomConn]
+    customConnCallbacks*: Option[CustomConnectionCallbacks]
 
 method unsubscribePeer*(p: PubSub, peerId: PeerId) {.base, gcsafe.} =
   ## handle peer disconnects
@@ -374,7 +374,7 @@ method getOrCreatePeer*(
     onEvent,
     protoNegotiated,
     p.maxMessageSize,
-    customConn = p.customConn,
+    customConnCallbacks = p.customConnCallbacks,
   )
   debug "created new pubsub peer", peerId
 
@@ -636,7 +636,8 @@ proc init*[PubParams: object | bool](
     maxMessageSize: int = 1024 * 1024,
     rng: ref HmacDrbgContext = newRng(),
     parameters: PubParams = false,
-    customConn: Option[CustomConn] = none(CustomConn),
+    customConnCallbacks: Option[CustomConnectionCallbacks] =
+      none(CustomConnectionCallbacks),
 ): P {.raises: [InitializationError], public.} =
   let pubsub =
     when PubParams is bool:
@@ -652,7 +653,7 @@ proc init*[PubParams: object | bool](
         maxMessageSize: maxMessageSize,
         rng: rng,
         topicsHigh: int.high,
-        customConn: customConn,
+        customConnectionCallbacks: customConnectionCallbacks,
       )
     else:
       P(
@@ -668,7 +669,7 @@ proc init*[PubParams: object | bool](
         maxMessageSize: maxMessageSize,
         rng: rng,
         topicsHigh: int.high,
-        customConn: customConn,
+        customConnectionCallbacks: customConnectionCallbacks,
       )
 
   proc peerEventHandler(peerId: PeerId, event: PeerEvent) {.async.} =
