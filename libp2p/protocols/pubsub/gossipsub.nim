@@ -791,7 +791,10 @@ method publish*(
   g.mcache.put(msgId, msg)
 
   g.broadcast(
-    peers, RPCMsg(messages: @[msg]), isHighPriority = true, useCustomConn = false
+    peers,
+    RPCMsg(messages: @[msg]),
+    isHighPriority = true,
+    useCustomConn = useCustomConn,
   )
 
   if g.knownTopics.contains(topic):
