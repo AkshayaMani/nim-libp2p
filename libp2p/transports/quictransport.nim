@@ -25,6 +25,7 @@ type
   QuicConnection = quic.Connection
   QuicTransportError* = object of transport.TransportError
   QuicTransportDialError* = object of transport.TransportDialError
+  QuicTransportAcceptStopped* = object of QuicTransportError
 
 const alpn = "libp2p"
 
@@ -254,7 +255,7 @@ method stop*(transport: QuicTransport) {.async: (raises: []).} =
 
 proc wrapConnection(
     transport: QuicTransport, connection: QuicConnection
-): QuicSession {.raises: [TransportOsError, LPError].} =
+): QuicSession {.raises: [TransportOsError, MaError].} =
   let
     remoteAddr = connection.remoteAddress()
     observedAddr =
@@ -281,13 +282,24 @@ method accept*(
     async: (raises: [transport.TransportError, CancelledError])
 .} =
   doAssert not self.listener.isNil, "call start() before calling accept()"
+
+  if not self.running:
+    # stop accept only when transport is stopped (not when error occurs)
+    raise newException(QuicTransportAcceptStopped, "Quic transport stopped")
+
   try:
     let connection = await self.listener.accept()
     return self.wrapConnection(connection)
-  except CancelledError as e:
-    raise e
-  except CatchableError as e:
-    raise (ref QuicTransportError)(msg: e.msg, parent: e)
+  except CancelledError as exc:
+    raise exc
+  except QuicError as exc:
+    debug "Quic Error", description = exc.msg
+  except MaError as exc:
+    debug "Multiaddr Error", description = exc.msg
+  except CatchableError as exc: # TODO: removing this requires async/raises in nim-quic
+    info "Unexpected error accepting quic connection", description = exc.msg
+  except TransportOsError as exc:
+    debug "OS Error", description = exc.msg
 
 method dial*(
     self: QuicTransport,
